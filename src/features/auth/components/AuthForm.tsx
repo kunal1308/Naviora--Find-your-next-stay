@@ -9,6 +9,7 @@ import { FirebaseError } from "firebase/app";
 import { signIn, signUp, signInWithGoogle } from "@/services/auth";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useToast } from "@/components/ui/ToastProvider";
+import GoogleIcon from "@/components/ui/GoogleIcon";
 import { ROUTES, isAdmin } from "@/constants";
 import { trackEvent } from "@/lib/analytics";
 
@@ -196,7 +197,7 @@ export default function AuthForm() {
         disabled={busy}
         className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
       >
-        <span className="text-lg">G</span> Continue with Google
+        <GoogleIcon /> Continue with Google
       </button>
     </div>
   );
