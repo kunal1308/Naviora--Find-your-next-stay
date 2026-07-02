@@ -1,11 +1,15 @@
 "use client";
 
-// The filter sidebar. It's a Client Component because it reads the current URL
-// (useSearchParams) and navigates on change (useRouter). It stores NO local
-// state — the URL is the single source of truth, so the server page re-renders
-// with fresh data on every change, and the filters survive refresh/share.
+// Filters. Client Component because it reads the URL (useSearchParams) and
+// navigates on change — the URL is the single source of truth.
+//
+// Desktop (lg+): a sticky sidebar.
+// Mobile: a floating "Filters" button pinned to the bottom that opens a
+// bottom-sheet (the same fields), like HomeSphere.
 
+import { useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { SlidersHorizontal, X } from "lucide-react";
 import { AMENITIES } from "@/constants";
 import { trackEvent } from "@/lib/analytics";
 
@@ -35,15 +39,30 @@ export default function HotelFilters() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const [open, setOpen] = useState(false);
 
   const selectedAmenities = (params.get("amenities") ?? "")
     .split(",")
     .filter(Boolean);
+  const hasFilters = FILTER_KEYS.some((k) => params.get(k));
+
+  // While the mobile sheet is open: lock background scroll + close on Escape.
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
   function push(next: URLSearchParams) {
     next.delete("page"); // any filter change returns to page 1
     const qs = next.toString();
-    // scroll: false keeps the viewport steady while results update.
     router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
@@ -73,26 +92,22 @@ export default function HotelFilters() {
     push(next);
   }
 
-  const hasFilters = FILTER_KEYS.some((k) => params.get(k));
-
   const selectClass =
     "w-full rounded-lg border border-slate-300 px-2 py-2 text-sm text-slate-900 focus:border-brand-500 focus:outline-none";
 
-  return (
-    <aside className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 lg:sticky lg:top-20 lg:self-start">
-      <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-slate-900">Filters</h2>
-        {hasFilters && (
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="text-xs font-medium text-brand-700 hover:underline"
-          >
-            Clear all
-          </button>
-        )}
-      </div>
+  const clearButton = hasFilters ? (
+    <button
+      type="button"
+      onClick={clearFilters}
+      className="text-xs font-medium text-brand-700 hover:underline"
+    >
+      Clear all
+    </button>
+  ) : null;
 
+  // The filter controls, reused in the desktop sidebar and the mobile sheet.
+  const filterFields = (
+    <>
       <div>
         <span className="mb-1 block text-sm font-medium text-slate-700">
           Sort by
@@ -170,6 +185,67 @@ export default function HotelFilters() {
           ))}
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden space-y-5 rounded-2xl border border-slate-200 bg-white p-5 lg:block lg:sticky lg:top-20 lg:self-start">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-slate-900">Filters</h2>
+          {clearButton}
+        </div>
+        {filterFields}
+      </aside>
+
+      {/* Mobile: floating button */}
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full bg-brand-600 px-6 py-3 text-sm font-semibold text-white shadow-lg lg:hidden"
+      >
+        <SlidersHorizontal className="h-4 w-4" />
+        Filters{hasFilters ? " · active" : ""}
+      </button>
+
+      {/* Mobile: bottom sheet */}
+      {open && (
+        <div
+          className="fixed inset-0 z-50 flex cursor-pointer flex-col justify-end bg-black/50 lg:hidden"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setOpen(false);
+          }}
+        >
+          <div
+            className="max-h-[85vh] space-y-5 overflow-y-auto rounded-t-2xl bg-white p-5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900">Filters</h2>
+              <div className="flex items-center gap-3">
+                {clearButton}
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close filters"
+                  className="grid h-8 w-8 place-items-center rounded-full text-slate-500 hover:bg-slate-100"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            {filterFields}
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="w-full rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white hover:bg-brand-700"
+            >
+              Show results
+            </button>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

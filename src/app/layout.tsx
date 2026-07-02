@@ -16,14 +16,21 @@ const inter = Inter({
 // In the App Router, SEO is just a metadata export — no <head> juggling.
 // metadataBase makes relative OG/sitemap URLs absolute; the opengraph-image.tsx
 // file is auto-attached to openGraph + twitter.
+const HOME_TITLE = `${SITE_NAME} — Find your next stay | Hotels & getaways worldwide`;
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${SITE_NAME} — Find your next stay`,
+    default: HOME_TITLE,
     template: `%s · ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
+  authors: [{ name: SITE_NAME }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  alternates: { canonical: "/" },
+  robots: { index: true, follow: true },
   keywords: [
     "hotels",
     "hotel booking",
@@ -38,12 +45,12 @@ export const metadata: Metadata = {
     type: "website",
     siteName: SITE_NAME,
     url: SITE_URL,
-    title: `${SITE_NAME} — Find your next stay`,
+    title: HOME_TITLE,
     description: SITE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: `${SITE_NAME} — Find your next stay`,
+    title: HOME_TITLE,
     description: SITE_DESCRIPTION,
   },
 };

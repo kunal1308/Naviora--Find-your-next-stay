@@ -6,9 +6,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { signOutUser } from "@/services/auth";
 import {
   getBookingsByUser,
   cancelBooking,
@@ -29,7 +27,6 @@ const STATUS_STYLES: Record<Booking["status"], string> = {
 };
 
 export default function ProfileView() {
-  const router = useRouter();
   const { user, loading } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [hotels, setHotels] = useState<Record<string, Hotel>>({});
@@ -55,11 +52,6 @@ export default function ProfileView() {
       active = false;
     };
   }, [user]);
-
-  async function handleSignOut() {
-    await signOutUser();
-    router.push(ROUTES.home);
-  }
 
   async function handleAvatar(url: string) {
     if (!user) return;
@@ -132,13 +124,6 @@ export default function ProfileView() {
             </div>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={handleSignOut}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-        >
-          Sign out
-        </button>
       </section>
 
       {/* Bookings */}
