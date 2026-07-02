@@ -209,18 +209,17 @@ export default function HotelFilters() {
         Filters{hasFilters ? " · active" : ""}
       </button>
 
-      {/* Mobile: bottom sheet */}
+      {/* Mobile: bottom sheet. Backdrop is a real <button> (like MUI's Drawer)
+          so tap-to-close works reliably on mobile. Sheet is a sibling on top. */}
       {open && (
-        <div
-          className="fixed inset-0 z-50 flex cursor-pointer flex-col justify-end bg-black/50 lg:hidden"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setOpen(false);
-          }}
-        >
-          <div
-            className="max-h-[85vh] space-y-5 overflow-y-auto rounded-t-2xl bg-white p-5"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <button
+            type="button"
+            aria-label="Close filters"
+            onClick={() => setOpen(false)}
+            className="absolute inset-0 h-full w-full bg-black/50"
+          />
+          <div className="absolute inset-x-0 bottom-0 max-h-[85vh] space-y-5 overflow-y-auto rounded-t-2xl bg-white p-5">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-900">Filters</h2>
               <div className="flex items-center gap-3">
