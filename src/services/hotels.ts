@@ -25,6 +25,7 @@ function toHotel(id: string, data: DocumentData): Hotel {
 
 export interface HotelFilters {
   destination?: string;
+  search?: string;
   minGuests?: number;
   minRating?: number;
   amenities?: string[];
@@ -33,7 +34,7 @@ export interface HotelFilters {
 }
 
 export async function getHotels(filters: HotelFilters = {}): Promise<Hotel[]> {
-  const { destination, minGuests, minRating, amenities, maxPriceINR, sort } =
+  const { destination, search, minGuests, minRating, amenities, maxPriceINR, sort } =
     filters;
 
   const snapshot = await getDocs(collection(db, "hotels"));
@@ -43,6 +44,16 @@ export async function getHotels(filters: HotelFilters = {}): Promise<Hotel[]> {
     const q = destination.toLowerCase();
     results = results.filter(
       (h) =>
+        h.destination.toLowerCase().includes(q) ||
+        h.country.toLowerCase().includes(q),
+    );
+  }
+
+  if (search) {
+    const q = search.trim().toLowerCase();
+    results = results.filter(
+      (h) =>
+        h.name.toLowerCase().includes(q) ||
         h.destination.toLowerCase().includes(q) ||
         h.country.toLowerCase().includes(q),
     );

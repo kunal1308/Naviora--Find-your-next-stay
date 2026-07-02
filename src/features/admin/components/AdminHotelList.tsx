@@ -12,6 +12,7 @@ import { formatCurrency } from "@/utils";
 import { useToast } from "@/components/ui/ToastProvider";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Pagination from "@/components/ui/Pagination";
+import SearchInput from "@/components/ui/SearchInput";
 
 const PAGE_SIZE = 20;
 
@@ -21,6 +22,7 @@ export default function AdminHotelList() {
   const [deleting, setDeleting] = useState<Hotel | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [page, setPage] = useState(1);
+  const [query, setQuery] = useState("");
   const toast = useToast();
 
   useEffect(() => {
@@ -51,9 +53,18 @@ export default function AdminHotelList() {
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil(hotels.length / PAGE_SIZE));
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? hotels.filter(
+        (h) =>
+          h.name.toLowerCase().includes(q) ||
+          h.destination.toLowerCase().includes(q) ||
+          h.country.toLowerCase().includes(q),
+      )
+    : hotels;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, totalPages);
-  const pageItems = hotels.slice(
+  const pageItems = filtered.slice(
     (current - 1) * PAGE_SIZE,
     current * PAGE_SIZE,
   );
@@ -66,7 +77,7 @@ export default function AdminHotelList() {
             Hotels
           </h1>
           <p className="text-sm text-slate-500">
-            {loading ? "Loading…" : `${hotels.length} total`}
+            {loading ? "Loading…" : `${filtered.length} of ${hotels.length}`}
           </p>
         </div>
         <Link
@@ -77,11 +88,21 @@ export default function AdminHotelList() {
         </Link>
       </div>
 
-      <div className="mt-6 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
+      <div className="mt-6">
+        <SearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Search hotels by name, city or country"
+        />
+      </div>
+
+      <div className="mt-4 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
         {loading ? (
           <div className="p-6 text-sm text-slate-500">Loading hotels…</div>
-        ) : hotels.length === 0 ? (
-          <div className="p-6 text-sm text-slate-500">No hotels yet.</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-6 text-sm text-slate-500">
+            {query ? "No hotels match your search." : "No hotels yet."}
+          </div>
         ) : (
           pageItems.map((hotel) => (
             <div

@@ -12,6 +12,7 @@ import type { Metadata } from "next";
 import { getHotels, type HotelFilters } from "@/services/hotels";
 import HotelResults from "@/features/hotels/components/HotelResults";
 import HotelFiltersPanel from "@/features/hotels/components/HotelFilters";
+import HotelSearch from "@/features/hotels/components/HotelSearch";
 
 export const metadata: Metadata = {
   title: "Hotels",
@@ -21,6 +22,7 @@ export const metadata: Metadata = {
 
 type SearchParams = Promise<{
   destination?: string;
+  search?: string;
   guests?: string;
   minRating?: string;
   amenities?: string;
@@ -37,6 +39,7 @@ export default async function HotelsPage({
 
   const filters: HotelFilters = {
     destination: sp.destination,
+    search: sp.search,
     minGuests: sp.guests ? Number(sp.guests) : undefined,
     minRating: sp.minRating ? Number(sp.minRating) : undefined,
     amenities: sp.amenities
@@ -50,9 +53,14 @@ export default async function HotelsPage({
 
   return (
     <div className="mx-auto max-w-[96rem] px-4 py-10 sm:px-6">
-      <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-        {sp.destination ? `Stays in ${sp.destination}` : "All hotels"}
-      </h1>
+      <div className="grid items-center gap-8 lg:grid-cols-[260px_1fr]">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+          {sp.destination ? `Stays in ${sp.destination}` : "All hotels"}
+        </h1>
+        <div className="w-full sm:w-2/5">
+          <HotelSearch />
+        </div>
+      </div>
 
       <div className="mt-6 grid items-start gap-8 lg:grid-cols-[260px_1fr]">
         <HotelFiltersPanel />

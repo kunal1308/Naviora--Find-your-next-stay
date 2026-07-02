@@ -23,7 +23,7 @@ import Pagination from "@/components/ui/Pagination";
 import EditBookingDialog from "@/features/profile/components/EditBookingDialog";
 import type { Booking, Hotel } from "@/types";
 import { formatCurrency, formatDate, nameFromEmail } from "@/utils";
-import { ROUTES } from "@/constants";
+import { ROUTES, isAdmin } from "@/constants";
 
 const STATUS_STYLES: Record<Booking["status"], string> = {
   confirmed: "bg-green-100 text-green-700",
@@ -149,6 +149,8 @@ export default function ProfileView() {
     );
   }
 
+  // Admins manage inventory, not personal trips — hide the bookings section.
+  const admin = isAdmin(user.email);
   const totalPages = Math.max(1, Math.ceil(bookings.length / BOOKINGS_PER_PAGE));
   const currentPage = Math.min(page, totalPages);
   const pageBookings = bookings.slice(
@@ -188,7 +190,8 @@ export default function ProfileView() {
         </div>
       </section>
 
-      {/* Bookings */}
+      {/* Bookings — travelers only; admins manage listings instead. */}
+      {!admin && (
       <section>
         <h2 className="text-xl font-semibold text-slate-900">My bookings</h2>
 
@@ -282,6 +285,7 @@ export default function ProfileView() {
           onPage={setPage}
         />
       </section>
+      )}
 
       {editing && (
         <EditBookingDialog

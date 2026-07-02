@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { getAllUsers, type UserRecord } from "@/services/users";
 import Pagination from "@/components/ui/Pagination";
+import SearchInput from "@/components/ui/SearchInput";
 import { nameFromEmail } from "@/utils";
 import { isAdmin } from "@/constants";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -18,6 +19,7 @@ export default function AdminUsersList() {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -32,9 +34,18 @@ export default function AdminUsersList() {
     };
   }, []);
 
-  const totalPages = Math.max(1, Math.ceil(users.length / PAGE_SIZE));
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? users.filter(
+        (u) =>
+          (u.name ?? "").toLowerCase().includes(q) ||
+          (u.email ?? "").toLowerCase().includes(q) ||
+          nameFromEmail(u.email).toLowerCase().includes(q),
+      )
+    : users;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const current = Math.min(page, totalPages);
-  const pageItems = users.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+  const pageItems = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
 
   return (
     <div>
@@ -43,15 +54,27 @@ export default function AdminUsersList() {
           Users
         </h1>
         <p className="text-sm text-slate-500">
-          {loading ? "Loading…" : `${users.length} user(s)`}
+          {loading
+            ? "Loading…"
+            : `${filtered.length} of ${users.length} user(s)`}
         </p>
       </div>
 
-      <div className="mt-6 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
+      <div className="mt-6">
+        <SearchInput
+          value={query}
+          onChange={setQuery}
+          placeholder="Search users by name or email"
+        />
+      </div>
+
+      <div className="mt-4 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-white">
         {loading ? (
           <div className="p-6 text-sm text-slate-500">Loading users…</div>
-        ) : users.length === 0 ? (
-          <div className="p-6 text-sm text-slate-500">No users yet.</div>
+        ) : filtered.length === 0 ? (
+          <div className="p-6 text-sm text-slate-500">
+            {query ? "No users match your search." : "No users yet."}
+          </div>
         ) : (
           pageItems.map((u) => (
             <div key={u.id} className="flex items-center gap-4 p-4">
