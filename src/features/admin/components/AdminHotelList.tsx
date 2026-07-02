@@ -9,6 +9,8 @@ import { getHotels, deleteHotel } from "@/services/hotels";
 import type { Hotel } from "@/types";
 import { ROUTES } from "@/constants";
 import { formatCurrency } from "@/utils";
+import { useToast } from "@/components/ui/ToastProvider";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import Pagination from "@/components/ui/Pagination";
 
 const PAGE_SIZE = 20;
@@ -16,8 +18,10 @@ const PAGE_SIZE = 20;
 export default function AdminHotelList() {
   const [hotels, setHotels] = useState<Hotel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<Hotel | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [page, setPage] = useState(1);
+  const toast = useToast();
 
   useEffect(() => {
     let active = true;
@@ -32,16 +36,18 @@ export default function AdminHotelList() {
     };
   }, []);
 
-  async function handleDelete(hotel: Hotel) {
-    if (!confirm(`Delete "${hotel.name}"? This cannot be undone.`)) return;
-    setBusyId(hotel.id);
+  async function confirmDelete() {
+    if (!deleting) return;
+    setDeleteBusy(true);
     try {
-      await deleteHotel(hotel.id);
-      setHotels((prev) => prev.filter((h) => h.id !== hotel.id));
+      await deleteHotel(deleting.id);
+      setHotels((prev) => prev.filter((h) => h.id !== deleting.id));
+      toast.success(`Deleted "${deleting.name}".`);
+      setDeleting(null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Delete failed.");
+      toast.error(err instanceof Error ? err.message : "Delete failed.");
     } finally {
-      setBusyId(null);
+      setDeleteBusy(false);
     }
   }
 
@@ -105,11 +111,10 @@ export default function AdminHotelList() {
                 </Link>
                 <button
                   type="button"
-                  onClick={() => handleDelete(hotel)}
-                  disabled={busyId === hotel.id}
-                  className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
+                  onClick={() => setDeleting(hotel)}
+                  className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
                 >
-                  {busyId === hotel.id ? "…" : "Delete"}
+                  Delete
                 </button>
               </div>
             </div>
@@ -119,6 +124,27 @@ export default function AdminHotelList() {
 
       {!loading && (
         <Pagination page={current} totalPages={totalPages} onPage={setPage} />
+      )}
+
+      {deleting && (
+        <ConfirmDialog
+          title="Delete hotel?"
+          danger
+          confirmLabel="Delete"
+          cancelLabel="Keep"
+          loading={deleteBusy}
+          onConfirm={confirmDelete}
+          onClose={() => setDeleting(null)}
+          message={
+            <>
+              Delete{" "}
+              <span className="font-medium text-slate-700">
+                {deleting.name}
+              </span>
+              ? This cannot be undone.
+            </>
+          }
+        />
       )}
     </div>
   );

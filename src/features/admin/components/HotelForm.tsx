@@ -13,6 +13,7 @@ import { AMENITIES, ROUTES } from "@/constants";
 import { slugify } from "@/utils";
 import { createHotel, updateHotel } from "@/services/hotels";
 import ImageUploader from "@/components/ui/ImageUploader";
+import { useToast } from "@/components/ui/ToastProvider";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { trackEvent } from "@/lib/analytics";
 
@@ -29,6 +30,7 @@ export default function HotelForm({
 }) {
   const router = useRouter();
   const { user } = useAuth();
+  const toast = useToast();
   const editing = Boolean(initial);
   const redirectTo = asHost ? ROUTES.host : ROUTES.admin;
 
@@ -69,11 +71,13 @@ export default function HotelForm({
 
     if (!name.trim()) {
       setError("Name is required.");
+      toast.error("Name is required.");
       return;
     }
 
     if (images.length === 0) {
       setError("Please upload at least one image.");
+      toast.error("Please upload at least one image.");
       return;
     }
 
@@ -107,10 +111,13 @@ export default function HotelForm({
         await createHotel(hotel);
       }
       void trackEvent(editing ? "edit_listing" : "create_listing", { asHost });
+      toast.success(editing ? "Listing updated." : "Listing created.");
       router.push(redirectTo);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed.");
+      const message = err instanceof Error ? err.message : "Save failed.";
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }

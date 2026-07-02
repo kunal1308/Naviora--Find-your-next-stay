@@ -7,6 +7,7 @@
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useWishlist } from "@/features/wishlist/WishlistProvider";
+import { useToast } from "@/components/ui/ToastProvider";
 import { ROUTES } from "@/constants";
 import { cn } from "@/utils";
 import { trackEvent } from "@/lib/analytics";
@@ -21,6 +22,7 @@ export default function WishlistButton({
   const router = useRouter();
   const { user } = useAuth();
   const { isSaved, toggle } = useWishlist();
+  const toast = useToast();
   const saved = isSaved(hotelId);
 
   function handleClick(e: React.MouseEvent) {
@@ -34,6 +36,7 @@ export default function WishlistButton({
       item_id: hotelId,
     });
     toggle(hotelId);
+    toast.success(saved ? "Removed from wishlist." : "Saved to wishlist.");
   }
 
   // Wishlist is hidden for signed-out visitors — they browse freely, but the

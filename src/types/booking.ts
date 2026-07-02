@@ -11,5 +11,7 @@ export interface Booking {
   currency: string;
   status: BookingStatus;
   createdAt: string; // ISO date
-  paymentId?: string; // Razorpay payment id (set after a verified payment)
+  paymentId?: string; // first Razorpay payment id (set after a verified payment)
+  payments?: string[]; // all payment ids (original + top-ups from edits)
+  refunds?: string[]; // refund ids issued against this booking
 }

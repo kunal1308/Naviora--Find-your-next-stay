@@ -4,7 +4,8 @@
 
 import type { Destination, Hotel, Review } from "@/types";
 import { AMENITIES } from "@/constants";
-import { slugify } from "@/utils";
+import { INR_RATES } from "@/constants/currency";
+import { slugify, toINR } from "@/utils";
 
 const rand = (min: number, max: number) => Math.random() * (max - min) + min;
 const randInt = (min: number, max: number) => Math.floor(rand(min, max + 1));
@@ -12,6 +13,23 @@ const pick = <T,>(arr: readonly T[]): T => arr[randInt(0, arr.length - 1)];
 const sample = <T,>(arr: readonly T[], n: number): T[] =>
   [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 const token = () => Math.random().toString(36).slice(2, 8);
+
+// Razorpay TEST mode rejects large transactions ("amount exceeds maximum").
+// Foreign-currency hotels (USD/EUR/etc.) convert to big INR totals, so we cap
+// each nightly rate to this INR-equivalent and back-convert to the hotel's
+// native currency. Change this one number to tune how payable stays are.
+export const TEST_MAX_INR_PER_NIGHT = 5000;
+
+export function capPriceNative(
+  pricePerNight: number,
+  currency: string,
+): number {
+  if (toINR(pricePerNight, currency) <= TEST_MAX_INR_PER_NIGHT) {
+    return pricePerNight;
+  }
+  const rate = INR_RATES[currency] ?? 1;
+  return Math.round(TEST_MAX_INR_PER_NIGHT / rate);
+}
 
 interface DestSeed {
   name: string;
@@ -24,16 +42,16 @@ interface DestSeed {
 }
 
 const DEST_POOL: DestSeed[] = [
-  { name: "Goa", country: "India", currency: "INR", lat: 15.49, lng: 73.83, tagline: "Beaches & nightlife", price: [1800, 9000] },
-  { name: "Jaipur", country: "India", currency: "INR", lat: 26.92, lng: 75.82, tagline: "Palaces & heritage", price: [2500, 9500] },
-  { name: "Manali", country: "India", currency: "INR", lat: 32.24, lng: 77.19, tagline: "Mountains & snow", price: [2000, 7000] },
-  { name: "Udaipur", country: "India", currency: "INR", lat: 24.58, lng: 73.68, tagline: "Lakes & havelis", price: [3000, 9000] },
-  { name: "Kerala", country: "India", currency: "INR", lat: 9.93, lng: 76.27, tagline: "Backwaters & greenery", price: [2500, 8500] },
-  { name: "Dubai", country: "UAE", currency: "AED", lat: 25.2, lng: 55.27, tagline: "Luxury & skylines", price: [350, 1000] },
-  { name: "Singapore", country: "Singapore", currency: "SGD", lat: 1.29, lng: 103.85, tagline: "Gardens & food", price: [180, 450] },
-  { name: "Tokyo", country: "Japan", currency: "JPY", lat: 35.68, lng: 139.76, tagline: "Culture & neon", price: [9000, 35000] },
-  { name: "Paris", country: "France", currency: "EUR", lat: 48.85, lng: 2.35, tagline: "Art & cafés", price: [80, 400] },
-  { name: "New York", country: "USA", currency: "USD", lat: 40.71, lng: -74.0, tagline: "The city that never sleeps", price: [90, 450] },
+  { name: "Goa", country: "India", currency: "INR", lat: 15.49, lng: 73.83, tagline: "Beaches & nightlife", price: [1500, 5000] },
+  { name: "Jaipur", country: "India", currency: "INR", lat: 26.92, lng: 75.82, tagline: "Palaces & heritage", price: [1800, 5000] },
+  { name: "Manali", country: "India", currency: "INR", lat: 32.24, lng: 77.19, tagline: "Mountains & snow", price: [1200, 4200] },
+  { name: "Udaipur", country: "India", currency: "INR", lat: 24.58, lng: 73.68, tagline: "Lakes & havelis", price: [2000, 5000] },
+  { name: "Kerala", country: "India", currency: "INR", lat: 9.93, lng: 76.27, tagline: "Backwaters & greenery", price: [1600, 4800] },
+  { name: "Dubai", country: "UAE", currency: "AED", lat: 25.2, lng: 55.27, tagline: "Luxury & skylines", price: [110, 210] },
+  { name: "Singapore", country: "Singapore", currency: "SGD", lat: 1.29, lng: 103.85, tagline: "Gardens & food", price: [40, 78] },
+  { name: "Tokyo", country: "Japan", currency: "JPY", lat: 35.68, lng: 139.76, tagline: "Culture & neon", price: [3500, 9000] },
+  { name: "Paris", country: "France", currency: "EUR", lat: 48.85, lng: 2.35, tagline: "Art & cafés", price: [28, 55] },
+  { name: "New York", country: "USA", currency: "USD", lat: 40.71, lng: -74.0, tagline: "The city that never sleeps", price: [32, 60] },
 ];
 
 const ADJ = ["Azure", "Royal", "Grand", "Sunset", "Palm", "Ocean", "Coral", "Pine", "Lotus", "Amber", "Serene", "Golden", "Emerald", "Crystal", "Skyline"];
@@ -62,7 +80,10 @@ export function generateHotels(count = 10): Hotel[] {
       destination: dest.name,
       country: dest.country,
       description: `A comfortable stay in ${dest.name}, ${dest.country}, close to the area's highlights.`,
-      pricePerNight: randInt(dest.price[0], dest.price[1]),
+      pricePerNight: capPriceNative(
+        randInt(dest.price[0], dest.price[1]),
+        dest.currency,
+      ),
       currency: dest.currency,
       rating: Math.round(rand(3.8, 4.9) * 10) / 10,
       reviewCount: randInt(30, 500),

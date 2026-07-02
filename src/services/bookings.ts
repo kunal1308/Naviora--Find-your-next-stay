@@ -69,3 +69,10 @@ export function canModifyBooking(checkIn: string): boolean {
   const ONE_DAY = 24 * 60 * 60 * 1000;
   return new Date(checkIn).getTime() - Date.now() >= ONE_DAY;
 }
+
+// All Razorpay payment ids for a booking. Newer bookings store a `payments`
+// array (original + top-ups); older ones only have the single `paymentId`.
+export function paymentIdsOf(booking: Booking): string[] {
+  if (booking.payments?.length) return booking.payments;
+  return booking.paymentId ? [booking.paymentId] : [];
+}

@@ -5,6 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { AuthProvider } from "@/features/auth/AuthProvider";
 import { WishlistProvider } from "@/features/wishlist/WishlistProvider";
+import { ToastProvider } from "@/components/ui/ToastProvider";
 import FirebaseAnalytics from "@/components/analytics/FirebaseAnalytics";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/constants";
 
@@ -67,14 +68,16 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {/* AuthProvider makes the current user available app-wide via useAuth(). */}
-        <AuthProvider>
-          <WishlistProvider>
-            <Navbar />
-            {/* Every page renders here, between the shared navbar and footer. */}
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </WishlistProvider>
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <WishlistProvider>
+              <Navbar />
+              {/* Every page renders here, between the shared navbar and footer. */}
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </WishlistProvider>
+          </AuthProvider>
+        </ToastProvider>
         <FirebaseAnalytics />
       </body>
     </html>

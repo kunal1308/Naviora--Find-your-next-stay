@@ -9,6 +9,7 @@ import { useState } from "react";
 import { writeBatch, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getHotels } from "@/services/hotels";
+import { useToast } from "@/components/ui/ToastProvider";
 import {
   generateHotels,
   generateReviews,
@@ -19,11 +20,10 @@ const ADD_COUNT = 10;
 
 export default function SeedButton() {
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const toast = useToast();
 
   async function handleSeed() {
     setBusy(true);
-    setMessage(null);
     try {
       // 1. Append new hotels + a few reviews (unique ids — nothing overwritten).
       const newHotels = generateHotels(ADD_COUNT);
@@ -41,28 +41,25 @@ export default function SeedButton() {
       );
       await destBatch.commit();
 
-      setMessage(
-        `Added ${newHotels.length} hotels. Catalog now has ${all.length}. Reloading…`,
+      toast.success(
+        `Added ${newHotels.length} hotels. Catalog now has ${all.length}.`,
       );
       setTimeout(() => window.location.reload(), 900);
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Failed to add hotels.");
+      toast.error(err instanceof Error ? err.message : "Failed to add hotels.");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div>
-      <button
-        type="button"
-        onClick={handleSeed}
-        disabled={busy}
-        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
-      >
-        {busy ? "Adding…" : `Add ${ADD_COUNT} sample hotels`}
-      </button>
-      {message && <p className="mt-2 text-sm text-slate-600">{message}</p>}
-    </div>
+    <button
+      type="button"
+      onClick={handleSeed}
+      disabled={busy}
+      className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 disabled:opacity-60"
+    >
+      {busy ? "Adding…" : `Add ${ADD_COUNT} sample hotels`}
+    </button>
   );
 }

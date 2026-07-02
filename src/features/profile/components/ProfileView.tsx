@@ -10,11 +10,16 @@ import { useAuth } from "@/features/auth/AuthProvider";
 import {
   getBookingsByUser,
   cancelBooking,
+  updateBooking,
   canModifyBooking,
+  paymentIdsOf,
 } from "@/services/bookings";
 import { getHotels } from "@/services/hotels";
 import { getAvatar, updateAvatar } from "@/services/users";
 import ImageUploader from "@/components/ui/ImageUploader";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/ToastProvider";
+import Pagination from "@/components/ui/Pagination";
 import EditBookingDialog from "@/features/profile/components/EditBookingDialog";
 import type { Booking, Hotel } from "@/types";
 import { formatCurrency, formatDate, nameFromEmail } from "@/utils";
@@ -26,13 +31,20 @@ const STATUS_STYLES: Record<Booking["status"], string> = {
   cancelled: "bg-slate-200 text-slate-600",
 };
 
+const BOOKINGS_PER_PAGE = 5;
+
 export default function ProfileView() {
   const { user, loading } = useAuth();
+  const toast = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [hotels, setHotels] = useState<Record<string, Hotel>>({});
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loadingData, setLoadingData] = useState(true);
   const [editing, setEditing] = useState<Booking | null>(null);
+  const [cancelling, setCancelling] = useState<Booking | null>(null);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     if (!user) return;
@@ -56,7 +68,12 @@ export default function ProfileView() {
   async function handleAvatar(url: string) {
     if (!user) return;
     setAvatarUrl(url); // optimistic
-    await updateAvatar(user.uid, url);
+    try {
+      await updateAvatar(user.uid, url);
+      toast.success("Profile photo updated.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't save photo.");
+    }
   }
 
   async function reloadBookings() {
@@ -64,13 +81,51 @@ export default function ProfileView() {
     setBookings(await getBookingsByUser(user.uid));
   }
 
-  async function handleCancel(id: string) {
-    if (!confirm("Cancel this booking? This can't be undone.")) return;
+  async function confirmCancel() {
+    if (!cancelling) return;
+    setCancelBusy(true);
+    setCancelError(null);
     try {
-      await cancelBooking(id);
+      const paymentIds = paymentIdsOf(cancelling);
+      const refundable =
+        paymentIds.length > 0 && canModifyBooking(cancelling.checkIn);
+
+      if (refundable) {
+        const res = await fetch("/api/razorpay/refund", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            paymentIds,
+            hotelId: cancelling.hotelId,
+            prevCheckIn: cancelling.checkIn,
+            prevCheckOut: cancelling.checkOut,
+            cancel: true,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || "Refund failed.");
+        await updateBooking(cancelling.id, {
+          status: "cancelled",
+          refunds: [
+            ...(cancelling.refunds ?? []),
+            ...result.refunds.map((r: { refundId: string }) => r.refundId),
+          ],
+        });
+      } else {
+        await cancelBooking(cancelling.id);
+      }
+
       await reloadBookings();
+      setCancelling(null);
+      toast.success(
+        refundable ? "Booking cancelled and refunded." : "Booking cancelled.",
+      );
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Cancel failed.");
+      const message = err instanceof Error ? err.message : "Cancel failed.";
+      setCancelError(message);
+      toast.error(message);
+    } finally {
+      setCancelBusy(false);
     }
   }
 
@@ -93,6 +148,13 @@ export default function ProfileView() {
       </div>
     );
   }
+
+  const totalPages = Math.max(1, Math.ceil(bookings.length / BOOKINGS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const pageBookings = bookings.slice(
+    (currentPage - 1) * BOOKINGS_PER_PAGE,
+    currentPage * BOOKINGS_PER_PAGE,
+  );
 
   return (
     <div className="space-y-8">
@@ -151,7 +213,7 @@ export default function ProfileView() {
           </div>
         ) : (
           <ul className="mt-4 space-y-3">
-            {bookings.map((b) => {
+            {pageBookings.map((b) => {
               const hotel = hotels[b.hotelId];
               return (
                 <li
@@ -193,7 +255,10 @@ export default function ProfileView() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleCancel(b.id)}
+                            onClick={() => {
+                              setCancelError(null);
+                              setCancelling(b);
+                            }}
                             className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
                           >
                             Cancel
@@ -210,6 +275,12 @@ export default function ProfileView() {
             })}
           </ul>
         )}
+
+        <Pagination
+          page={currentPage}
+          totalPages={totalPages}
+          onPage={setPage}
+        />
       </section>
 
       {editing && (
@@ -221,6 +292,36 @@ export default function ProfileView() {
             setEditing(null);
             void reloadBookings();
           }}
+        />
+      )}
+
+      {cancelling && (
+        <ConfirmDialog
+          title="Cancel booking?"
+          danger
+          confirmLabel="Cancel booking"
+          cancelLabel="Keep booking"
+          loading={cancelBusy}
+          error={cancelError}
+          onConfirm={confirmCancel}
+          onClose={() => setCancelling(null)}
+          message={
+            <>
+              Cancel your stay at{" "}
+              <span className="font-medium text-slate-700">
+                {hotels[cancelling.hotelId]?.name ?? cancelling.hotelId}
+              </span>
+              ?{" "}
+              {paymentIdsOf(cancelling).length > 0 &&
+              canModifyBooking(cancelling.checkIn) ? (
+                <>
+                  You&apos;ll be refunded{" "}
+                  {formatCurrency(cancelling.totalPrice, cancelling.currency)}.{" "}
+                </>
+              ) : null}
+              This can&apos;t be undone.
+            </>
+          }
         />
       )}
     </div>

@@ -41,6 +41,50 @@ export async function createOrder(
   return res.json();
 }
 
+interface RazorpayPayment {
+  id: string;
+  amount: number; // captured amount, paise
+  amount_refunded: number; // already refunded, paise
+  status: string;
+}
+
+// Fetch a payment so we can see how much is still refundable. Using Razorpay
+// as the source of truth means the client never gets to name a refund amount.
+export async function getPayment(paymentId: string): Promise<RazorpayPayment> {
+  const auth = Buffer.from(`${KEY_ID}:${KEY_SECRET}`).toString("base64");
+  const res = await fetch(`https://api.razorpay.com/v1/payments/${paymentId}`, {
+    headers: { Authorization: `Basic ${auth}` },
+  });
+  if (!res.ok) {
+    throw new Error(`Razorpay payment lookup failed: ${await res.text()}`);
+  }
+  return res.json();
+}
+
+// Issue a refund against a payment. amountPaise omitted = full refund.
+export async function refundPayment(
+  paymentId: string,
+  amountPaise?: number,
+): Promise<{ id: string; amount: number }> {
+  const auth = Buffer.from(`${KEY_ID}:${KEY_SECRET}`).toString("base64");
+  const res = await fetch(
+    `https://api.razorpay.com/v1/payments/${paymentId}/refund`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/json",
+      },
+      body:
+        amountPaise != null ? JSON.stringify({ amount: amountPaise }) : undefined,
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`Razorpay refund failed: ${await res.text()}`);
+  }
+  return res.json();
+}
+
 // Verify the payment signature Razorpay sends back after checkout.
 // signature = HMAC_SHA256(order_id + "|" + payment_id, key_secret).
 export function verifySignature(

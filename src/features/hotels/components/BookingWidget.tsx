@@ -14,6 +14,7 @@ import Link from "next/link";
 import type { Booking, Hotel } from "@/types";
 import { formatCurrency, formatDate } from "@/utils";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { useToast } from "@/components/ui/ToastProvider";
 import { createBooking, getActiveBookingForHotel } from "@/services/bookings";
 import { ROUTES } from "@/constants";
 import { trackEvent } from "@/lib/analytics";
@@ -35,6 +36,7 @@ function loadRazorpayScript(): Promise<boolean> {
 export default function BookingWidget({ hotel }: { hotel: Hotel }) {
   const router = useRouter();
   const { user } = useAuth();
+  const toast = useToast();
 
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
@@ -102,6 +104,7 @@ export default function BookingWidget({ hotel }: { hotel: Hotel }) {
         status: "confirmed",
         createdAt: new Date().toISOString(),
         paymentId: response.razorpay_payment_id,
+        payments: [response.razorpay_payment_id],
       });
 
       void trackEvent("purchase", {
@@ -111,8 +114,11 @@ export default function BookingWidget({ hotel }: { hotel: Hotel }) {
         nights,
       });
       setConfirmed(true);
+      toast.success("Booking confirmed!");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Booking failed.");
+      const message = err instanceof Error ? err.message : "Booking failed.";
+      setError(message);
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -170,7 +176,9 @@ export default function BookingWidget({ hotel }: { hotel: Hotel }) {
       });
       rzp.open();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment failed.");
+      const message = err instanceof Error ? err.message : "Payment failed.";
+      setError(message);
+      toast.error(message);
       setSubmitting(false);
     }
   }

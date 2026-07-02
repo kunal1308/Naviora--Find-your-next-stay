@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { FirebaseError } from "firebase/app";
 import { signIn, signUp, signInWithGoogle } from "@/services/auth";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { useToast } from "@/components/ui/ToastProvider";
 import { ROUTES, isAdmin } from "@/constants";
 import { trackEvent } from "@/lib/analytics";
 
@@ -41,6 +42,7 @@ function messageForError(err: unknown): string {
 export default function AuthForm() {
   const router = useRouter();
   const { user } = useAuth();
+  const toast = useToast();
 
   const [mode, setMode] = useState<Mode>("signin");
   const [name, setName] = useState("");
@@ -66,14 +68,18 @@ export default function AuthForm() {
       if (mode === "signup") {
         const u = await signUp(name, email, password);
         void trackEvent("sign_up", { method: "password" });
+        toast.success("Account created. Welcome to Naviora!");
         router.push(destFor(u.email));
       } else {
         const u = await signIn(email, password);
         void trackEvent("login", { method: "password" });
+        toast.success("Signed in.");
         router.push(destFor(u.email));
       }
     } catch (err) {
-      setError(messageForError(err));
+      const message = messageForError(err);
+      setError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -85,9 +91,12 @@ export default function AuthForm() {
     try {
       const u = await signInWithGoogle();
       void trackEvent("login", { method: "google" });
+      toast.success("Signed in.");
       router.push(destFor(u.email));
     } catch (err) {
-      setError(messageForError(err));
+      const message = messageForError(err);
+      setError(message);
+      toast.error(message);
     } finally {
       setBusy(false);
     }
