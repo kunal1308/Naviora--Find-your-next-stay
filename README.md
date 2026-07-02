@@ -205,7 +205,6 @@ Deployed on **Vercel**.
 - Host dashboard (list / edit)
 - Admin (listings, users)
 - Auth (login / signup)
-- Footer pages (About, Help, Contact, Terms, Privacy, etc.)
 
 ---
 
@@ -224,19 +223,34 @@ Built for educational and portfolio purposes.
 # 📸 Screenshots
 
 ## 🏠 Home Page
+<img width="959" height="496" alt="image" src="https://github.com/user-attachments/assets/75c61417-7001-46c3-bba5-f29c6f44b8c1" />
+<img width="959" height="497" alt="image" src="https://github.com/user-attachments/assets/169aac81-2fb3-4466-9af8-fd049771a1b4" />
+<img width="959" height="502" alt="image" src="https://github.com/user-attachments/assets/87eb779f-41aa-48dd-bd49-11d961f0710c" />
 
-
+## Auth (login / signup)
+<img width="959" height="497" alt="image" src="https://github.com/user-attachments/assets/8a293deb-d5c5-4ee9-a4f8-e76e7edd14af" />
+<img width="959" height="498" alt="image" src="https://github.com/user-attachments/assets/39de4e06-28b0-4cf9-a7e1-a373fda67072" />
+  
 ## 🔎 Hotels & Filters
-
+<img width="959" height="498" alt="image" src="https://github.com/user-attachments/assets/6b301515-f401-4d67-9d55-2125ef839d28" />
 
 ## 📄 Hotel Details
-
+<img width="959" height="500" alt="image" src="https://github.com/user-attachments/assets/a69c64cd-1a21-4065-81b2-33c88efd8bf7" />
+<img width="959" height="500" alt="image" src="https://github.com/user-attachments/assets/a0dd59bd-f421-4619-a8e4-60c41035f79f" />
+<img width="959" height="498" alt="image" src="https://github.com/user-attachments/assets/4b7041ae-4139-4975-ac7e-225fff439415" />
 
 ## 📅 Booking & Payment
-
+<img width="959" height="497" alt="image" src="https://github.com/user-attachments/assets/756f3ae4-48bc-4401-bd55-cd391adec990" />
+<img width="959" height="502" alt="image" src="https://github.com/user-attachments/assets/eb42f0e6-346a-4050-ac0b-116e5dbbfdac" />
+<img width="959" height="496" alt="image" src="https://github.com/user-attachments/assets/583adbf1-63ae-4906-8891-eaa2f4d3a3fe" />
 
 ## 🏡 Host Dashboard
-
+<img width="959" height="497" alt="image" src="https://github.com/user-attachments/assets/87164c00-f461-41a2-a1e2-a3edcfe527fb" />
+<img width="959" height="495" alt="image" src="https://github.com/user-attachments/assets/0322a914-9c0b-4b28-b777-f6cb434d1875" />
+<img width="959" height="493" alt="image" src="https://github.com/user-attachments/assets/c164739e-d425-4368-90b8-c1072ce3b503" />
 
 ## 🛠️ Admin
+<img width="959" height="500" alt="image" src="https://github.com/user-attachments/assets/5f4443b6-c6b1-40c0-9d66-8f69a9dba51f" />
+<img width="959" height="498" alt="image" src="https://github.com/user-attachments/assets/44c9933b-ca1e-4fde-ad9b-6f5b8fd3ba98" />
+
 
