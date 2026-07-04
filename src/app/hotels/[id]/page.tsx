@@ -11,8 +11,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getHotelById, getHotels } from "@/services/hotels";
 import { getReviewsByHotelId } from "@/services/reviews";
-import { ROUTES, AMENITY_MAP } from "@/constants";
+import { ROUTES, AMENITY_MAP, SITE_URL, SITE_NAME } from "@/constants";
 import { formatCurrency, formatDate } from "@/utils";
+import JsonLd from "@/components/seo/JsonLd";
 import BookingWidget from "@/features/hotels/components/BookingWidget";
 import WishlistButton from "@/features/wishlist/components/WishlistButton";
 import ViewHotelTracker from "@/features/hotels/components/ViewHotelTracker";
@@ -50,8 +51,90 @@ export default async function HotelDetailPage({ params }: { params: Params }) {
 
   const reviews = await getReviewsByHotelId(id);
 
+  // schema.org structured data → rich results (rating stars, price) in search.
+  const hotelUrl = `${SITE_URL}${ROUTES.hotel(hotel.id)}`;
+  const hotelLd = {
+    "@context": "https://schema.org",
+    "@type": "Hotel",
+    "@id": hotelUrl,
+    name: hotel.name,
+    description: hotel.description,
+    url: hotelUrl,
+    ...(hotel.images.length > 0 ? { image: hotel.images } : {}),
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: hotel.destination,
+      addressCountry: hotel.country,
+    },
+    ...(hotel.coordinates.lat || hotel.coordinates.lng
+      ? {
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: hotel.coordinates.lat,
+            longitude: hotel.coordinates.lng,
+          },
+        }
+      : {}),
+    priceRange: formatCurrency(hotel.pricePerNight, hotel.currency),
+    ...(hotel.reviewCount > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: hotel.rating,
+            reviewCount: hotel.reviewCount,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        }
+      : {}),
+    makesOffer: {
+      "@type": "Offer",
+      price: hotel.pricePerNight,
+      priceCurrency: hotel.currency,
+      availability: "https://schema.org/InStock",
+    },
+    amenityFeature: hotel.amenities.map((amenityId) => ({
+      "@type": "LocationFeatureSpecification",
+      name: AMENITY_MAP[amenityId]?.label ?? amenityId,
+      value: true,
+    })),
+    ...(reviews.length > 0
+      ? {
+          review: reviews.slice(0, 5).map((r) => ({
+            "@type": "Review",
+            author: { "@type": "Person", name: r.author },
+            datePublished: r.createdAt,
+            reviewBody: r.comment,
+            reviewRating: {
+              "@type": "Rating",
+              ratingValue: r.rating,
+              bestRating: 5,
+              worstRating: 1,
+            },
+          })),
+        }
+      : {}),
+  };
+
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: SITE_NAME, item: SITE_URL },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Hotels",
+        item: `${SITE_URL}${ROUTES.hotels}`,
+      },
+      { "@type": "ListItem", position: 3, name: hotel.name, item: hotelUrl },
+    ],
+  };
+
   return (
     <div className="mx-auto max-w-[96rem] px-4 py-8 sm:px-6">
+      <JsonLd data={hotelLd} />
+      <JsonLd data={breadcrumbLd} />
       <ViewHotelTracker hotelId={hotel.id} name={hotel.name} />
       <Link
         href={ROUTES.hotels}
