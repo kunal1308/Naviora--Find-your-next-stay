@@ -6,7 +6,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FirebaseError } from "firebase/app";
-import { signIn, signUp, signInWithGoogle } from "@/services/auth";
+import { signIn, signUp, signInWithGoogle, resetPassword } from "@/services/auth";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useToast } from "@/components/ui/ToastProvider";
 import GoogleIcon from "@/components/ui/GoogleIcon";
@@ -77,6 +77,28 @@ export default function AuthForm() {
         toast.success("Signed in.");
         router.push(destFor(u.email));
       }
+    } catch (err) {
+      const message = messageForError(err);
+      setError(message);
+      toast.error(message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Email the user a reset link (email/password accounts only).
+  async function handleForgot() {
+    if (!email) {
+      const m = "Enter your email above, then tap “Forgot password?”.";
+      setError(m);
+      toast.error(m);
+      return;
+    }
+    setError(null);
+    setBusy(true);
+    try {
+      await resetPassword(email);
+      toast.success(`Password reset link sent to ${email}.`);
     } catch (err) {
       const message = messageForError(err);
       setError(message);
@@ -165,6 +187,19 @@ export default function AuthForm() {
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:border-brand-500 focus:outline-none"
           />
         </label>
+
+        {mode === "signin" && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleForgot}
+              disabled={busy}
+              className="text-sm font-medium text-brand-700 hover:underline disabled:opacity-60"
+            >
+              Forgot password?
+            </button>
+          </div>
+        )}
 
         {error && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">

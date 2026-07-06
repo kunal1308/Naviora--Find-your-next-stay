@@ -10,6 +10,7 @@ import {
   GoogleAuthProvider,
   updateProfile,
   signOut,
+  sendPasswordResetEmail,
   onAuthStateChanged,
   type User as FirebaseUser,
 } from "firebase/auth";
@@ -43,6 +44,12 @@ export async function signInWithGoogle(): Promise<FirebaseUser> {
 
 export function signOutUser(): Promise<void> {
   return signOut(auth);
+}
+
+// Send a password-reset email. Firebase hosts the reset page and handles the
+// actual password change — we just trigger the email.
+export function resetPassword(email: string): Promise<void> {
+  return sendPasswordResetEmail(auth, email);
 }
 
 // Subscribe to auth state changes; returns an unsubscribe function.
