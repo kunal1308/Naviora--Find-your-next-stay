@@ -7,6 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import SearchBar from "@/components/search/SearchBar";
 import TrackedLink from "@/components/analytics/TrackedLink";
+import HomeRedirect from "@/features/auth/components/HomeRedirect";
 import { ROUTES } from "@/constants";
 
 const STATS = [
@@ -57,6 +58,7 @@ const GALLERY = [
 export default function Home() {
   return (
     <>
+      <HomeRedirect />
       {/* HERO */}
       <section
         className="relative bg-slate-900 bg-cover bg-center"
