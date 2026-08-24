@@ -45,7 +45,8 @@ interface RazorpayPayment {
   id: string;
   amount: number; // captured amount, paise
   amount_refunded: number; // already refunded, paise
-  status: string;
+  currency: string;
+  status: string; // "authorized" | "captured" | "refunded" | ...
 }
 
 // Fetch a payment so we can see how much is still refundable. Using Razorpay
@@ -81,6 +82,33 @@ export async function refundPayment(
   );
   if (!res.ok) {
     throw new Error(`Razorpay refund failed: ${await res.text()}`);
+  }
+  return res.json();
+}
+
+// Capture an authorized payment. Razorpay only allows refunds on CAPTURED
+// payments, and we don't rely on dashboard auto-capture, so we capture
+// explicitly right after the signature is verified. Capturing an
+// already-captured payment fails, so callers should check status first.
+export async function capturePayment(
+  paymentId: string,
+  amountPaise: number,
+  currency: string,
+): Promise<RazorpayPayment> {
+  const auth = Buffer.from(`${KEY_ID}:${KEY_SECRET}`).toString("base64");
+  const res = await fetch(
+    `https://api.razorpay.com/v1/payments/${paymentId}/capture`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ amount: amountPaise, currency }),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`Razorpay capture failed: ${await res.text()}`);
   }
   return res.json();
 }
