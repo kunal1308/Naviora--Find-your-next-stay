@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { FirebaseError } from "firebase/app";
 import { signIn, signUp, signInWithGoogle, resetPassword } from "@/services/auth";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -49,6 +50,7 @@ export default function AuthForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -136,6 +138,7 @@ export default function AuthForm() {
             onClick={() => {
               setMode(m);
               setError(null);
+              setShowPassword(false);
             }}
             className={`rounded-md py-2 transition-colors ${
               mode === m
@@ -177,15 +180,26 @@ export default function AuthForm() {
 
         <label className="block">
           <span className="text-sm font-medium text-slate-700">Password</span>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:border-brand-500 focus:outline-none"
-          />
+          <div className="relative mt-1">
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 pr-10 text-slate-900 focus:border-brand-500 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              onMouseDown={(e) => e.preventDefault()}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
         </label>
 
         {mode === "signin" && (
