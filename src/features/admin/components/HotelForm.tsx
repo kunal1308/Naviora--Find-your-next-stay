@@ -81,6 +81,13 @@ export default function HotelForm({
       return;
     }
 
+    const priceNum = Number(pricePerNight);
+    if (!Number.isFinite(priceNum) || priceNum <= 0) {
+      setError("Price per night must be greater than 0.");
+      toast.error("Price per night must be greater than 0.");
+      return;
+    }
+
     const id = initial?.id ?? slugify(name);
     const hotel: Hotel = {
       id,
@@ -89,7 +96,7 @@ export default function HotelForm({
       destination: destination.trim(),
       country: country.trim(),
       description: description.trim(),
-      pricePerNight: Number(pricePerNight) || 0,
+      pricePerNight: priceNum,
       currency,
       rating: Number(rating) || 0,
       reviewCount: Number(reviewCount) || 0,
