@@ -12,12 +12,16 @@ import type { Hotel } from "@/types";
 import { AMENITIES, ROUTES } from "@/constants";
 import { slugify } from "@/utils";
 import { createHotel, updateHotel } from "@/services/hotels";
+import { newHotelId, validateHotelForm } from "@/features/admin/hotelFormRules";
 import ImageUploader from "@/components/ui/ImageUploader";
 import { useToast } from "@/components/ui/ToastProvider";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { trackEvent } from "@/lib/analytics";
 
 const CURRENCIES = ["INR", "AED", "SGD", "JPY", "USD", "EUR"];
+
+// Red asterisk for required field labels
+const Required = () => <span className="text-red-500"> *</span>;
 
 // Shared by /admin (curated hotels) and /host (user listings). In host mode it
 // stamps the current user as the owner and returns to the host dashboard.
@@ -42,22 +46,15 @@ export default function HotelForm({
     initial?.pricePerNight?.toString() ?? "",
   );
   const [currency, setCurrency] = useState(initial?.currency ?? "INR");
-  const [rating, setRating] = useState(initial?.rating?.toString() ?? "4.5");
-  const [reviewCount, setReviewCount] = useState(
-    initial?.reviewCount?.toString() ?? "0",
-  );
   const [maxGuests, setMaxGuests] = useState(
-    initial?.maxGuests?.toString() ?? "2",
+    initial?.maxGuests?.toString() ?? "",
   );
-  const [lat, setLat] = useState(initial?.coordinates.lat?.toString() ?? "0");
-  const [lng, setLng] = useState(initial?.coordinates.lng?.toString() ?? "0");
   const [amenities, setAmenities] = useState<string[]>(
     initial?.amenities ?? [],
   );
   const [images, setImages] = useState<string[]>(initial?.images ?? []);
 
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   function toggleAmenity(id: string) {
     setAmenities((prev) =>
@@ -67,55 +64,49 @@ export default function HotelForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
 
-    if (!name.trim()) {
-      setError("Name is required.");
-      toast.error("Name is required.");
+    const problem = validateHotelForm({
+      name,
+      destination,
+      country,
+      description,
+      pricePerNight,
+      maxGuests,
+      images,
+    });
+    if (problem) {
+      toast.error(problem);
       return;
     }
 
-    if (images.length === 0) {
-      setError("Please upload at least one image.");
-      toast.error("Please upload at least one image.");
-      return;
-    }
-
-    const priceNum = Number(pricePerNight);
-    if (!Number.isFinite(priceNum) || priceNum <= 0) {
-      setError("Price per night must be greater than 0.");
-      toast.error("Price per night must be greater than 0.");
-      return;
-    }
-
-    const id = initial?.id ?? slugify(name);
-    const hotel: Hotel = {
-      id,
+    // Rating and review count aren't in the form: they come from guest
+    // reviews (see services/reviews), so edits leave them untouched.
+    const details: Omit<Hotel, "rating" | "reviewCount"> = {
+      id: initial?.id ?? newHotelId(name),
       slug: slugify(name),
       name: name.trim(),
       destination: destination.trim(),
       country: country.trim(),
       description: description.trim(),
-      pricePerNight: priceNum,
+      pricePerNight: Number(pricePerNight),
       currency,
-      rating: Number(rating) || 0,
-      reviewCount: Number(reviewCount) || 0,
       images,
       amenities: amenities as Hotel["amenities"],
-      maxGuests: Number(maxGuests) || 1,
-      coordinates: { lat: Number(lat) || 0, lng: Number(lng) || 0 },
+      maxGuests: Number(maxGuests),
+      // No longer edited in the form: keep existing coordinates on edit
+      coordinates: initial?.coordinates ?? { lat: 0, lng: 0 },
     };
 
     // Preserve owner on edit; stamp current user as owner for new host listings.
     const owner = initial?.ownerId ?? (asHost ? user?.uid : undefined);
-    if (owner) hotel.ownerId = owner;
+    if (owner) details.ownerId = owner;
 
     setSaving(true);
     try {
       if (editing) {
-        await updateHotel(initial!.id, hotel);
+        await updateHotel(initial!.id, details);
       } else {
-        await createHotel(hotel);
+        await createHotel({ ...details, rating: 0, reviewCount: 0 });
       }
       void trackEvent(editing ? "edit_listing" : "create_listing", { asHost });
       toast.success(editing ? "Listing updated." : "Listing created.");
@@ -123,7 +114,6 @@ export default function HotelForm({
       router.refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Save failed.";
-      setError(message);
       toast.error(message);
     } finally {
       setSaving(false);
@@ -137,7 +127,9 @@ export default function HotelForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block sm:col-span-2">
-          <span className="text-sm font-medium text-slate-700">Name</span>
+          <span className="text-sm font-medium text-slate-700">
+            Name<Required />
+          </span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -147,7 +139,7 @@ export default function HotelForm({
 
         <label className="block">
           <span className="text-sm font-medium text-slate-700">
-            Destination (city)
+            Destination (city)<Required />
           </span>
           <input
             value={destination}
@@ -157,7 +149,9 @@ export default function HotelForm({
         </label>
 
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Country</span>
+          <span className="text-sm font-medium text-slate-700">
+            Country<Required />
+          </span>
           <input
             value={country}
             onChange={(e) => setCountry(e.target.value)}
@@ -167,7 +161,7 @@ export default function HotelForm({
 
         <label className="block sm:col-span-2">
           <span className="text-sm font-medium text-slate-700">
-            Description
+            Description<Required />
           </span>
           <textarea
             value={description}
@@ -179,7 +173,7 @@ export default function HotelForm({
 
         <label className="block">
           <span className="text-sm font-medium text-slate-700">
-            Price / night
+            Price / night<Required />
           </span>
           <input
             type="number"
@@ -191,7 +185,9 @@ export default function HotelForm({
         </label>
 
         <label className="block">
-          <span className="text-sm font-medium text-slate-700">Currency</span>
+          <span className="text-sm font-medium text-slate-700">
+            Currency<Required />
+          </span>
           <select
             value={currency}
             onChange={(e) => setCurrency(e.target.value)}
@@ -207,61 +203,13 @@ export default function HotelForm({
 
         <label className="block">
           <span className="text-sm font-medium text-slate-700">
-            Rating (0–5)
+            Max guests<Required />
           </span>
-          <input
-            type="number"
-            min="0"
-            max="5"
-            step="0.1"
-            value={rating}
-            onChange={(e) => setRating(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-sm font-medium text-slate-700">
-            Review count
-          </span>
-          <input
-            type="number"
-            min="0"
-            value={reviewCount}
-            onChange={(e) => setReviewCount(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-sm font-medium text-slate-700">Max guests</span>
           <input
             type="number"
             min="1"
             value={maxGuests}
             onChange={(e) => setMaxGuests(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-sm font-medium text-slate-700">Latitude</span>
-          <input
-            type="number"
-            step="any"
-            value={lat}
-            onChange={(e) => setLat(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-sm font-medium text-slate-700">Longitude</span>
-          <input
-            type="number"
-            step="any"
-            value={lng}
-            onChange={(e) => setLng(e.target.value)}
             className={inputClass}
           />
         </label>
@@ -291,7 +239,7 @@ export default function HotelForm({
       {/* Images */}
       <div>
         <span className="text-sm font-medium text-slate-700">
-          Images <span className="text-red-500">*</span>
+          Images<Required />
         </span>
         <p className="text-xs text-slate-400">
           At least one photo is required.
@@ -327,12 +275,6 @@ export default function HotelForm({
           />
         </div>
       </div>
-
-      {error && (
-        <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
-      )}
 
       <div className="flex gap-3">
         <button

@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Hotel } from "@/types";
 import { ROUTES, AMENITY_MAP } from "@/constants";
-import { formatCurrency } from "@/utils";
+import { formatCurrency, formatRating, formatReviewCount } from "@/utils";
 import WishlistButton from "@/features/wishlist/components/WishlistButton";
 
 export default function HotelCard({ hotel }: { hotel: Hotel }) {
@@ -31,7 +31,7 @@ export default function HotelCard({ hotel }: { hotel: Hotel }) {
           </div>
         )}
         <span className="absolute right-3 top-3 rounded-full bg-white/95 px-2 py-0.5 text-xs font-semibold text-slate-800">
-          ★ {hotel.rating}
+          {formatRating(hotel)}
         </span>
         <WishlistButton
           hotelId={hotel.id}
@@ -55,10 +55,10 @@ export default function HotelCard({ hotel }: { hotel: Hotel }) {
           {hotel.amenities.slice(0, 5).map((id) => (
             <span
               key={id}
-              title={AMENITY_MAP[id].label}
+              title={AMENITY_MAP[id]?.label ?? id}
               className="rounded-md bg-slate-100 px-1.5 py-0.5 text-sm"
             >
-              {AMENITY_MAP[id].icon}
+              {AMENITY_MAP[id]?.icon ?? "•"}
             </span>
           ))}
         </div>
@@ -71,7 +71,7 @@ export default function HotelCard({ hotel }: { hotel: Hotel }) {
             <span className="text-sm text-slate-500"> / night</span>
           </div>
           <span className="text-xs text-slate-400">
-            {hotel.reviewCount} reviews
+            {formatReviewCount(hotel.reviewCount)}
           </span>
         </div>
       </div>

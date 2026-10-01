@@ -15,13 +15,15 @@ import {
   paymentIdsOf,
 } from "@/services/bookings";
 import { getHotels } from "@/services/hotels";
+import { canReviewBooking, getReviewsByUser } from "@/services/reviews";
 import { getAvatar, updateAvatar } from "@/services/users";
 import ImageUploader from "@/components/ui/ImageUploader";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useToast } from "@/components/ui/ToastProvider";
 import Pagination from "@/components/ui/Pagination";
 import EditBookingDialog from "@/features/profile/components/EditBookingDialog";
-import type { Booking, Hotel } from "@/types";
+import ReviewDialog from "@/features/profile/components/ReviewDialog";
+import type { Booking, Hotel, Review } from "@/types";
 import { formatCurrency, formatDate, nameFromEmail } from "@/utils";
 import { ROUTES, isAdmin } from "@/constants";
 
@@ -45,6 +47,9 @@ export default function ProfileView() {
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  // The user's reviews keyed by booking id
+  const [reviews, setReviews] = useState<Record<string, Review>>({});
+  const [reviewing, setReviewing] = useState<Booking | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -53,11 +58,13 @@ export default function ProfileView() {
       getBookingsByUser(user.uid),
       getHotels(),
       getAvatar(user.uid),
-    ]).then(([bk, hs, av]) => {
+      getReviewsByUser(user.uid),
+    ]).then(([bk, hs, av, rv]) => {
       if (!active) return;
       setBookings(bk);
       setHotels(Object.fromEntries(hs.map((h) => [h.id, h])));
       setAvatarUrl(av);
+      setReviews(rv);
       setLoadingData(false);
     });
     return () => {
@@ -268,9 +275,25 @@ export default function ProfileView() {
                           </button>
                         </div>
                       ) : (
-                        <span className="text-xs text-slate-400">
-                          Changes closed
-                        </span>
+                        canReviewBooking(b) ? (
+                          reviews[b.id] ? (
+                            <span className="text-sm text-amber-500">
+                              Reviewed {"★".repeat(reviews[b.id].rating)}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setReviewing(b)}
+                              className="rounded-lg border border-brand-200 px-3 py-1.5 text-sm font-medium text-brand-700 hover:bg-brand-50"
+                            >
+                              Write a review
+                            </button>
+                          )
+                        ) : (
+                          <span className="text-xs text-slate-400">
+                            Changes closed
+                          </span>
+                        )
                       ))}
                   </div>
                 </li>
@@ -295,6 +318,20 @@ export default function ProfileView() {
           onSaved={() => {
             setEditing(null);
             void reloadBookings();
+          }}
+        />
+      )}
+
+      {reviewing && (
+        <ReviewDialog
+          booking={reviewing}
+          hotelName={hotels[reviewing.hotelId]?.name ?? "this hotel"}
+          userId={user.uid}
+          author={user.displayName || nameFromEmail(user.email) || "Traveler"}
+          onClose={() => setReviewing(null)}
+          onSaved={() => {
+            setReviewing(null);
+            void getReviewsByUser(user.uid).then(setReviews);
           }}
         />
       )}

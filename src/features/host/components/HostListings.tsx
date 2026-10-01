@@ -9,7 +9,7 @@ import { useAuth } from "@/features/auth/AuthProvider";
 import { getHotelsByOwner, deleteHotel } from "@/services/hotels";
 import type { Hotel } from "@/types";
 import { ROUTES } from "@/constants";
-import { formatCurrency } from "@/utils";
+import { formatCurrency, formatRating } from "@/utils";
 import { useToast } from "@/components/ui/ToastProvider";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
@@ -92,8 +92,8 @@ export default function HostListings() {
                 <div className="font-medium text-slate-900">{hotel.name}</div>
                 <div className="text-sm text-slate-500">
                   {hotel.destination}, {hotel.country} ·{" "}
-                  {formatCurrency(hotel.pricePerNight, hotel.currency)} · ★{" "}
-                  {hotel.rating}
+                  {formatCurrency(hotel.pricePerNight, hotel.currency)} ·{" "}
+                  {formatRating(hotel)}
                 </div>
               </div>
               <div className="flex items-center gap-2">

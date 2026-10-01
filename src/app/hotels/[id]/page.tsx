@@ -12,7 +12,12 @@ import { notFound } from "next/navigation";
 import { getHotelById, getHotels } from "@/services/hotels";
 import { getReviewsByHotelId } from "@/services/reviews";
 import { ROUTES, AMENITY_MAP, SITE_URL, SITE_NAME } from "@/constants";
-import { formatCurrency, formatDate } from "@/utils";
+import {
+  formatCurrency,
+  formatDate,
+  formatRating,
+  formatReviewCount,
+} from "@/utils";
 import JsonLd from "@/components/seo/JsonLd";
 import BookingWidget from "@/features/hotels/components/BookingWidget";
 import WishlistButton from "@/features/wishlist/components/WishlistButton";
@@ -20,6 +25,10 @@ import ViewHotelTracker from "@/features/hotels/components/ViewHotelTracker";
 import HotelGallery from "@/features/hotels/components/HotelGallery";
 
 type Params = Promise<{ id: string }>;
+
+// ISR: re-render a hotel's page at most once a minute, so new guest reviews
+// (and listing edits) show up without a redeploy.
+export const revalidate = 60;
 
 // Pre-render one static page per hotel at build time.
 export async function generateStaticParams() {
@@ -155,9 +164,9 @@ export default async function HotelDetailPage({ params }: { params: Params }) {
           </span>
           <span aria-hidden>·</span>
           <span className="font-medium text-slate-800">
-            ★ {hotel.rating}{" "}
+            {formatRating(hotel)}{" "}
             <span className="font-normal text-slate-500">
-              ({hotel.reviewCount} reviews)
+              ({formatReviewCount(hotel.reviewCount)})
             </span>
           </span>
         </div>
@@ -186,23 +195,26 @@ export default async function HotelDetailPage({ params }: { params: Params }) {
             </p>
           </section>
 
-          <section className="mt-8">
-            <h2 className="text-xl font-semibold text-slate-900">Amenities</h2>
-            <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {hotel.amenities.map((amenityId) => {
-                const amenity = AMENITY_MAP[amenityId];
-                return (
-                  <li
-                    key={amenityId}
-                    className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
-                  >
-                    <span>{amenity.icon}</span>
-                    {amenity.label}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
+          {/* Amenities are optional, so skip the section when there are none */}
+          {hotel.amenities?.length > 0 && (
+            <section className="mt-8">
+              <h2 className="text-xl font-semibold text-slate-900">Amenities</h2>
+              <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {hotel.amenities.map((amenityId) => {
+                  const amenity = AMENITY_MAP[amenityId];
+                  return (
+                    <li
+                      key={amenityId}
+                      className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
+                    >
+                      <span>{amenity?.icon}</span>
+                      {amenity?.label ?? amenityId}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
 
           <section className="mt-8">
             <h2 className="text-xl font-semibold text-slate-900">
