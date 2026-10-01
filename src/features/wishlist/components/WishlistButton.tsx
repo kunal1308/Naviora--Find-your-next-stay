@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useWishlist } from "@/features/wishlist/WishlistProvider";
 import { useToast } from "@/components/ui/ToastProvider";
-import { ROUTES } from "@/constants";
+import { ROUTES, isAdmin } from "@/constants";
 import { cn } from "@/utils";
 import { trackEvent } from "@/lib/analytics";
 
@@ -40,8 +40,9 @@ export default function WishlistButton({
   }
 
   // Wishlist is hidden for signed-out visitors — they browse freely, but the
-  // save affordance only appears once logged in.
-  if (!user) return null;
+  // save affordance only appears once logged in. The admin isn't a traveler
+  // (no bookings or wishlist), so it's hidden for them too.
+  if (!user || isAdmin(user.email)) return null;
 
   return (
     <button

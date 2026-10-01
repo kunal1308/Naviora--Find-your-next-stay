@@ -11,7 +11,7 @@ import { useWishlist } from "@/features/wishlist/WishlistProvider";
 import { getHotels } from "@/services/hotels";
 import type { Hotel } from "@/types";
 import HotelCard from "@/features/hotels/components/HotelCard";
-import { ROUTES } from "@/constants";
+import { ROUTES, isAdmin } from "@/constants";
 
 function EmptyState({
   title,
@@ -74,6 +74,17 @@ export default function WishlistList() {
         title="Sign in to view your wishlist"
         body="Your saved stays sync across devices once you're signed in."
         cta={{ href: ROUTES.login, label: "Sign in" }}
+      />
+    );
+  }
+
+  // The admin isn't a traveler (no bookings or wishlist).
+  if (isAdmin(user.email)) {
+    return (
+      <EmptyState
+        title="No wishlist for admin accounts"
+        body="Wishlists are for traveler accounts. Use a traveler account to save stays."
+        cta={{ href: ROUTES.admin, label: "Go to dashboard" }}
       />
     );
   }

@@ -152,8 +152,9 @@ export default function AdminUsersList() {
                   {u.email || "No email on record yet"}
                 </div>
               </div>
+              {/* Admins have no wishlist */}
               <div className="text-sm text-slate-500">
-                {u.wishlist?.length ?? 0} saved
+                {isAdmin(u.email) ? "—" : `${u.wishlist?.length ?? 0} saved`}
               </div>
               {/* No toggle for the admin, or until status has loaded */}
               {disabledIds &&
