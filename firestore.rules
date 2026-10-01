@@ -112,12 +112,14 @@ service cloud.firestore {
     }
 
     // Bookings: a verified user can create and update only their own; any
-    // signed-in owner can read theirs.
+    // signed-in owner can read theirs. The admin can't book (they manage the
+    // catalog and have no bookings view).
     // (Edit/cancel go through update; the "1 day before" rule is enforced in
     //  the app. Ownership can't be reassigned on update.)
     match /bookings/{id} {
       allow read:   if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if isVerified() && request.auth.uid == request.resource.data.userId;
+      allow create: if isVerified() && !isAdmin()
+                    && request.auth.uid == request.resource.data.userId;
       allow update: if isVerified()
                     && request.auth.uid == resource.data.userId
                     && request.resource.data.userId == resource.data.userId;

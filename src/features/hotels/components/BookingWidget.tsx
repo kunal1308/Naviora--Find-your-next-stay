@@ -16,7 +16,7 @@ import { formatCurrency, formatDate } from "@/utils";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useToast } from "@/components/ui/ToastProvider";
 import { createBooking, getActiveBookingForHotel } from "@/services/bookings";
-import { ROUTES } from "@/constants";
+import { ROUTES, isAdmin } from "@/constants";
 import { trackEvent } from "@/lib/analytics";
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -73,6 +73,28 @@ export default function BookingWidget({ hotel }: { hotel: Hotel }) {
           className="mt-4 inline-block rounded-xl bg-brand-600 px-4 py-2.5 font-semibold text-white hover:bg-brand-700"
         >
           Manage listing
+        </Link>
+      </div>
+    );
+  }
+
+  // The admin manages the catalog and has no bookings view, so can't book.
+  // (firestore.rules block admin bookings too.)
+  if (user && isAdmin(user.email)) {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm">
+        <div className="text-2xl">🛠️</div>
+        <h3 className="mt-2 font-semibold text-slate-900">
+          Signed in as admin
+        </h3>
+        <p className="mt-1 text-sm text-slate-600">
+          Admin accounts can&apos;t book stays. Use a traveler account to book.
+        </p>
+        <Link
+          href={ROUTES.adminEditHotel(hotel.id)}
+          className="mt-4 inline-block rounded-xl bg-brand-600 px-4 py-2.5 font-semibold text-white hover:bg-brand-700"
+        >
+          Edit hotel
         </Link>
       </div>
     );
