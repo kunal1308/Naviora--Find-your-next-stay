@@ -12,8 +12,42 @@ import {
   arrayRemove,
   onSnapshot,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 import { nameFromEmail } from "@/utils";
+
+// Calls the admin-only /api/admin/users route with the signed-in admin's
+// Firebase ID token (the server re-checks that the caller is the admin).
+async function adminUsersApi<T>(init?: RequestInit): Promise<T> {
+  const token = await auth.currentUser?.getIdToken();
+  if (!token) throw new Error("Please sign in again.");
+  const res = await fetch("/api/admin/users", {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Request failed.");
+  return data as T;
+}
+
+// Admin: uids of accounts that are disabled (can't sign in).
+export async function getDisabledUserIds(): Promise<Set<string>> {
+  const { disabled } = await adminUsersApi<{ disabled: string[] }>();
+  return new Set(disabled);
+}
+
+// Admin: disable (block sign-in) or re-enable an account. Their data is kept.
+export async function setUserDisabled(
+  uid: string,
+  disabled: boolean,
+): Promise<void> {
+  await adminUsersApi({
+    method: "POST",
+    body: JSON.stringify({ uid, disabled }),
+  });
+}
 
 export interface UserRecord {
   id: string;

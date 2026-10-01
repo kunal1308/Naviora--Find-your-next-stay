@@ -7,6 +7,7 @@ data fetching (that's `services/`), not pure helpers (that's `utils/`).
 ```
 lib/
 ├── firebase/     app init → exports auth, db  (+ seedData.ts for /api/seed)
+├── firebase-admin/  SERVER ONLY: Admin SDK (disable accounts) + admin check
 ├── cloudinary/   image URL builder + unsigned upload helper
 └── analytics/    Firebase Analytics init + trackEvent (browser-guarded)
 ```

@@ -45,6 +45,8 @@ function messageForError(err: unknown): string {
         return "Please verify your email first. Check your inbox (and spam folder) for the link.";
       case "auth/too-many-requests":
         return "Too many attempts. Please try again later.";
+      case "auth/user-disabled":
+        return "This account has been disabled. Please contact support.";
       default:
         return err.message;
     }

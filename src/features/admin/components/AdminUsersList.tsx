@@ -5,9 +5,16 @@
 // (AuthProvider upserts a profile on login).
 
 import { useEffect, useState } from "react";
-import { getAllUsers, type UserRecord } from "@/services/users";
+import {
+  getAllUsers,
+  getDisabledUserIds,
+  setUserDisabled,
+  type UserRecord,
+} from "@/services/users";
 import Pagination from "@/components/ui/Pagination";
 import SearchInput from "@/components/ui/SearchInput";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/ToastProvider";
 import { nameFromEmail } from "@/utils";
 import { isAdmin } from "@/constants";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -20,6 +27,13 @@ export default function AdminUsersList() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
+  const toast = useToast();
+  // Account status comes from the server (Firebase Auth), separately from the
+  // profile list, so the list still shows if the status call fails.
+  const [disabledIds, setDisabledIds] = useState<Set<string> | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [busyUid, setBusyUid] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<UserRecord | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -29,10 +43,38 @@ export default function AdminUsersList() {
         setLoading(false);
       }
     });
+    getDisabledUserIds()
+      .then((ids) => active && setDisabledIds(ids))
+      .catch((err) => {
+        if (active) {
+          setStatusError(
+            err instanceof Error ? err.message : "Couldn't load account status.",
+          );
+        }
+      });
     return () => {
       active = false;
     };
   }, []);
+
+  async function toggleDisabled(target: UserRecord, disable: boolean) {
+    setBusyUid(target.id);
+    try {
+      await setUserDisabled(target.id, disable);
+      setDisabledIds((prev) => {
+        const next = new Set(prev);
+        if (disable) next.add(target.id);
+        else next.delete(target.id);
+        return next;
+      });
+      toast.success(disable ? "Account disabled." : "Account enabled.");
+      setConfirming(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Update failed.");
+    } finally {
+      setBusyUid(null);
+    }
+  }
 
   const q = query.trim().toLowerCase();
   const filtered = q
@@ -59,6 +101,12 @@ export default function AdminUsersList() {
             : `${filtered.length} of ${users.length} user(s)`}
         </p>
       </div>
+
+      {statusError && (
+        <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          Account status unavailable: {statusError}
+        </p>
+      )}
 
       <div className="mt-6">
         <SearchInput
@@ -94,6 +142,11 @@ export default function AdminUsersList() {
                       Admin
                     </span>
                   )}
+                  {disabledIds?.has(u.id) && (
+                    <span className="shrink-0 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">
+                      Disabled
+                    </span>
+                  )}
                 </div>
                 <div className="truncate text-sm text-slate-500">
                   {u.email || "No email on record yet"}
@@ -102,6 +155,28 @@ export default function AdminUsersList() {
               <div className="text-sm text-slate-500">
                 {u.wishlist?.length ?? 0} saved
               </div>
+              {/* No toggle for the admin, or until status has loaded */}
+              {disabledIds &&
+                !isAdmin(u.email) &&
+                u.id !== user?.uid &&
+                (disabledIds.has(u.id) ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleDisabled(u, false)}
+                    disabled={busyUid === u.id}
+                    className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:opacity-60"
+                  >
+                    {busyUid === u.id ? "Enabling…" : "Enable"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirming(u)}
+                    className="rounded-lg border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+                  >
+                    Disable
+                  </button>
+                ))}
             </div>
           ))
         )}
@@ -109,6 +184,28 @@ export default function AdminUsersList() {
 
       {!loading && (
         <Pagination page={current} totalPages={totalPages} onPage={setPage} />
+      )}
+
+      {confirming && (
+        <ConfirmDialog
+          title="Disable account?"
+          danger
+          confirmLabel="Disable"
+          cancelLabel="Keep active"
+          loading={busyUid === confirming.id}
+          onConfirm={() => toggleDisabled(confirming, true)}
+          onClose={() => setConfirming(null)}
+          message={
+            <>
+              <span className="font-medium text-slate-700">
+                {confirming.email || confirming.name || confirming.id}
+              </span>{" "}
+              won&apos;t be able to sign in and will be signed out within an
+              hour. Their bookings, reviews and listings are kept, and you can
+              enable the account again at any time.
+            </>
+          }
+        />
       )}
     </div>
   );
