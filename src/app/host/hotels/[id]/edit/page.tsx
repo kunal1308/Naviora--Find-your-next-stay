@@ -1,9 +1,11 @@
 // Server Component: load the listing, hand it to the client form in host mode.
-// Editing someone else's listing is blocked by firestore.rules on save.
+// HostListingGuard hides it from anyone but the owner; firestore.rules also
+// block saves to someone else's listing.
 
 import { notFound } from "next/navigation";
 import { getHotelById } from "@/services/hotels";
 import HotelForm from "@/features/admin/components/HotelForm";
+import HostListingGuard from "@/features/host/components/HostListingGuard";
 
 export default async function EditHostListingPage({
   params,
@@ -15,11 +17,13 @@ export default async function EditHostListingPage({
   if (!hotel) notFound();
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">
-        Edit {hotel.name}
-      </h1>
-      <HotelForm initial={hotel} asHost />
-    </div>
+    <HostListingGuard ownerId={hotel.ownerId}>
+      <div>
+        <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">
+          Edit {hotel.name}
+        </h1>
+        <HotelForm initial={hotel} asHost />
+      </div>
+    </HostListingGuard>
   );
 }
