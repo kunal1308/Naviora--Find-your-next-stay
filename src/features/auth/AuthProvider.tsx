@@ -36,14 +36,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Fires once with the initial state, then on every sign-in/out.
     const unsubscribe = subscribeToAuth((nextUser) => {
-      setUser(nextUser);
+      // Unverified email/password users are only signed in briefly during
+      // sign up / sign in checks, so the app treats them as signed out.
+      // (Google accounts arrive already verified.)
+      const verifiedUser = nextUser?.emailVerified ? nextUser : null;
+      setUser(verifiedUser);
       setLoading(false);
       // Keep a profile doc for every user so the admin can list them.
-      if (nextUser) {
+      if (verifiedUser) {
         void ensureUserProfile(
-          nextUser.uid,
-          nextUser.displayName,
-          nextUser.email,
+          verifiedUser.uid,
+          verifiedUser.displayName,
+          verifiedUser.email,
         );
       }
     });

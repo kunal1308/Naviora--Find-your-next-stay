@@ -7,7 +7,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { FirebaseError } from "firebase/app";
-import { signIn, signUp, signInWithGoogle, resetPassword } from "@/services/auth";
+import {
+  signIn,
+  signUp,
+  signInWithGoogle,
+  resetPassword,
+  resendVerificationEmail,
+  EMAIL_NOT_VERIFIED,
+} from "@/services/auth";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useToast } from "@/components/ui/ToastProvider";
 import GoogleIcon from "@/components/ui/GoogleIcon";
@@ -34,6 +41,10 @@ function messageForError(err: unknown): string {
         return "Google sign-in was cancelled.";
       case "auth/operation-not-allowed":
         return "This sign-in method isn't enabled in Firebase yet.";
+      case EMAIL_NOT_VERIFIED:
+        return "Please verify your email first. Check your inbox (and spam folder) for the link.";
+      case "auth/too-many-requests":
+        return "Too many attempts. Please try again later.";
       default:
         return err.message;
     }
@@ -52,6 +63,8 @@ export default function AuthForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [unverified, setUnverified] = useState(false);
   const [busy, setBusy] = useState(false);
 
   // Admins go to their dashboard; everyone else to hotels.
@@ -66,18 +79,59 @@ export default function AuthForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setNotice(null);
+    setUnverified(false);
     setBusy(true);
     try {
       if (mode === "signup") {
-        const u = await signUp(name, email, password);
+        const sent = await signUp(name, email, password);
         void trackEvent("sign_up", { method: "password" });
-        toast.success("Account created. Welcome to Naviora!");
-        router.push(destFor(u.email));
+        // Not signed in yet: they verify first, then sign in
+        if (sent) {
+          setNotice(
+            `We sent a verification link to ${email}. Verify your email, then sign in.`,
+          );
+          toast.success("Account created. Check your email.");
+        } else {
+          setNotice(
+            "Account created, but we couldn't send the verification email. Sign in to resend it.",
+          );
+          toast.error("Couldn't send the verification email.");
+        }
+        setMode("signin");
+        setName("");
+        setPassword("");
+        setShowPassword(false);
       } else {
         const u = await signIn(email, password);
         void trackEvent("login", { method: "password" });
         toast.success("Signed in.");
         router.push(destFor(u.email));
+      }
+    } catch (err) {
+      if (err instanceof FirebaseError && err.code === EMAIL_NOT_VERIFIED) {
+        setUnverified(true);
+      }
+      const message = messageForError(err);
+      setError(message);
+      toast.error(message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Send a fresh verification link using the entered email + password.
+  async function handleResend() {
+    setError(null);
+    setBusy(true);
+    try {
+      const alreadyVerified = await resendVerificationEmail(email, password);
+      setUnverified(false);
+      if (alreadyVerified) {
+        setNotice("Your email is already verified. Please sign in.");
+      } else {
+        setNotice(`Verification link sent to ${email}.`);
+        toast.success("Verification link sent.");
       }
     } catch (err) {
       const message = messageForError(err);
@@ -138,6 +192,8 @@ export default function AuthForm() {
             onClick={() => {
               setMode(m);
               setError(null);
+              setNotice(null);
+              setUnverified(false);
               setShowPassword(false);
             }}
             className={`rounded-md py-2 transition-colors ${
@@ -171,7 +227,10 @@ export default function AuthForm() {
           <input
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setUnverified(false);
+            }}
             required
             autoComplete="email"
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:border-brand-500 focus:outline-none"
@@ -215,10 +274,26 @@ export default function AuthForm() {
           </div>
         )}
 
-        {error && (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
+        {notice && (
+          <p className="rounded-lg bg-brand-50 px-3 py-2 text-sm text-brand-800">
+            {notice}
           </p>
+        )}
+
+        {error && (
+          <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            <p>{error}</p>
+            {unverified && (
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={busy}
+                className="mt-1 font-semibold underline disabled:opacity-60"
+              >
+                Resend verification link
+              </button>
+            )}
+          </div>
         )}
 
         <button
